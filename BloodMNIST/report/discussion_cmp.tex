@@ -1,0 +1,51 @@
+\paragraph{Desempenho.} A ordenação MLP $<$ CNN artesanal $<$ ResNet-18 é estrita em todas as métricas
+globais (\cref{tab:cmp}) e as diferenças são grandes frente à variabilidade observada (desvios de
+0,17--0,25 p.p. entre sementes/\emph{folds}): $+3{,}7$ p.p. de BAcc da MLP para a CNN simples e $+4{,}0$ p.p. da
+CNN simples para uma única ResNet-18 ajustada (+4,9 p.p. com o comitê). Por classe (\cref{tab:f1pc}), os
+ganhos concentram-se nas classes morfologicamente próximas --- BAS ($F_1$: 74,5 $\to$ 87,2 $\to$ 93,0\%),
+MON (76,5 $\to$ 80,9 $\to$ 89,1\%) e IG (74,7 $\to$ 82,0 $\to$ 87,5\%) ---, enquanto EOS, NEU e PLT, separáveis
+essencialmente por cor e tamanho, já estão acima de 93\% mesmo na MLP. Ou seja, cada salto de
+arquitetura compra discriminação de \emph{forma/textura}: localidade e compartilhamento de pesos (CNN
+simples) e, depois, hierarquia profunda de atributos com inicialização pré-treinada (ResNet).
+
+\paragraph{Parâmetros.} O número de parâmetros \emph{não} explica o desempenho por si só: a CNN simples tem
+11$\times$ \emph{menos} parâmetros que a MLP e é melhor, porque 99,5\% dos parâmetros da MLP estão na matriz
+$2352\times1024$ que liga cada pixel a cada neurônio sem nenhuma estrutura, enquanto a CNN gasta só 18.944
+parâmetros na convolução (compartilhados por todas as posições) e o restante na camada de saída. A ResNet-18
+tem 51$\times$ mais parâmetros que a CNN simples e 4,6$\times$ mais que a MLP, mas eles estão
+organizados em 17 camadas convolucionais principais com conexões residuais e, sobretudo, \emph{não partem do zero}: o
+pré-treino funciona como um forte \emph{prior} que permite usar essa capacidade com apenas $\approx11$ mil
+imagens sem sobreajuste severo. Em termos de custo computacional, a métrica relevante é o número de
+multiplicações-acumulações por imagem: $\approx2{,}4$\,M (MLP), $\approx15{,}0$\,M (CNN simples, quase toda
+na convolução $28\times28\times128\times147$) e $\approx148$\,M (ResNet-18 a $64\times64$), o que se reflete
+na inferência sobre o teste: 0,06\,s, 1,5\,s e 4,3\,s, respectivamente (CPU).
+
+\paragraph{Tempo de treinamento.} Treinar o modelo final levou 0,6\,min (MLP), 7,8\,min (CNN simples,
+68 épocas; média de 5,4\,min entre sementes) e 11,7\,min por \emph{fold} da ResNet-18 (12 épocas de
+$\approx\ftEpochTime$\,s), ou $\ftTotalTime$\,min para a CV completa. O custo da \emph{seleção de modelo}, porém,
+inverte parcialmente essa ordem: a busca da MLP custou $\approx17$\,min (30 treinamentos), a varredura da CNN
+$\approx\bTotalTime$\,min (70 treinamentos) e a ResNet dispensou busca extensa de arquitetura --- a CV
+foi usada para escolher entre duas estratégias de transferência e, ao mesmo tempo, produziu os 5 modelos do
+comitê. Por época, a ResNet é $\approx9\times$ mais lenta que a CNN simples ($\approx7$\,s/época), mas converge
+em muito menos épocas graças ao pré-treino (BAcc de validação de 90,5--92,2\% já na 4ª época).
+
+\paragraph{Compromisso.} Se o critério for exclusivamente desempenho, a ResNet-18 ajustada (preferencialmente
+em comitê) é a escolha clara: reduz o erro balanceado de 9,7\% (CNN simples) para 4,8\%, i.e., à metade. Se
+houver restrição severa de memória/energia (p.ex., embarcado), a CNN simples oferece $\approx95\%$ do
+desempenho da ResNet com 2\% dos parâmetros e 10\% das operações. A MLP é dominada: é pior que a CNN em
+desempenho e em número de parâmetros, vencendo apenas em custo de operações --- irrelevante nesta escala.
+
+\section{Conclusões}
+\begin{itemize}
+\item A MLP de uma camada oculta ($H=1024$, ReLU, BN, dropout 0,25, CE ponderada) atinge BAcc $=\mlpBacc\%$ e
+$\Fmac=\mlpFone\%$ no teste; os erros concentram-se no grupo BAS--IG--MON, que exige informação espacial.
+\item Na CNN simples, o número de kernels é o fator dominante (ganho logarítmico com saturação em $n\approx64$--128);
+o tamanho do kernel tem efeito pequeno, com ótimo em $k=7$ e degradação para $k=11$. A melhor configuração
+($n=\bBestN$, $k=\bBestK$) obtém BAcc $=\cBacc\%$ e $\Fmac=\cFone\%$ com 11$\times$ menos parâmetros que a MLP,
+mas é excessivamente confiante nos erros (ECE $=\cECE$).
+\item A ResNet-18 pré-treinada só é vantajosa com ajuste fino completo (FE: $\feTest\%$; FT: $\ftFoldBaccMS\%$
+por modelo e $\ftEnsBacc\%$ em comitê), resultado compatível com o \emph{benchmark} MedMNIST v2 mesmo sob
+orçamento de CPU (12 épocas, $64\times64$).
+\item Granulócitos imaturos permanecem a classe mais difícil para todos os modelos, o que é coerente com
+o fato de a classe agregar três estágios de maturação morfologicamente contíguos às demais classes.
+\end{itemize}

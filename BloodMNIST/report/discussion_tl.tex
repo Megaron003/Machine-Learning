@@ -1,0 +1,33 @@
+\paragraph{Discussão.}
+\textbf{(i) Extração de atributos falha; ajuste fino é essencial.} Com o tronco congelado, a BAcc na CV foi
+de apenas $\feCV\%$ e $\feTest\%$ no teste --- \emph{abaixo da MLP} treinada do zero. Os atributos da última
+camada de uma rede treinada na ImageNet codificam semântica de objetos naturais, e o domínio aqui é muito
+distinto: imagens de microscopia com coloração de May--Grünwald--Giemsa, objeto único centrado e,
+sobretudo, imagens de $28\times28$ interpoladas, sem as altas frequências que os filtros iniciais da rede esperam.
+Uma cabeça linear sobre esses 512 atributos não consegue reconstruir as pistas finas (granulação, cromatina)
+que separam IG, MON e BAS. Já o ajuste fino completo atinge $\ftCV\%$ na CV: a transferência é útil
+como \emph{inicialização} --- filtros genéricos de borda/textura e um ponto de partida bem condicionado para
+uma rede profunda ---, não como extrator fixo. Dada a diferença de $\approx15$ p.p. entre as estratégias,
+muito maior que os desvios entre \emph{folds} ($<1$ p.p.), a escolha de FT pela CV é inequívoca.
+
+\textbf{(ii) Estabilidade e generalização.} O desvio entre \emph{folds} é pequeno ($0{,}36$ p.p. na CV e
+$0{,}25$ p.p. no teste), indicando baixa sensibilidade à partição. A BAcc média no teste
+($\ftFoldBaccMS\%$) ficou ligeiramente \emph{acima} da estimativa por CV ($93{,}77\%$); como cada
+\emph{fold} de validação tem apenas $\approx2.700$ imagens (e $\approx195$ basófilos), a diferença está dentro
+do erro de estimação, e não há sinal de sobreajuste à seleção. O comitê dos 5 modelos (média das
+probabilidades) acrescenta $+0{,}76$ p.p. de BAcc ($\ftEnsBacc\%$), efeito típico de redução de variância por
+\emph{ensembling}, ao custo de $5\times$ mais parâmetros e tempo de inferência.
+
+\textbf{(iii) Estrutura dos erros.} A matriz de confusão do comitê (\cref{fig:tlcm}) mantém
+o padrão qualitativo das redes anteriores, porém muito atenuado: IG continua sendo a classe mais difícil
+(84,8\% de revocação; confunde-se com MON, BAS e NEU) e MON a segunda (90,5\%, com 6,0\% previstos como IG).
+Os basófilos, que eram o ponto fraco da MLP (75,0\%), chegam a 95,9\%, e LIN a 97,9\%. As classes com
+assinatura cromática forte (EOS, PLT) ficam próximas de 100\%.
+
+\textbf{(iv) Treinamento ainda não saturado.} A melhor época foi a 10ª--12ª em todos os \emph{folds}, com a
+BAcc de validação ainda crescendo lentamente sob o cronograma cosseno; o orçamento de 12 épocas e a resolução
+$64\times64$ foram impostos pelo uso exclusivo de CPU ($\approx\ftEpochTime$ s/época). Para referência, o
+\emph{benchmark} oficial \cite{yang2021} reporta acurácia de 95,8\% para a ResNet-18 treinada
+por 100 épocas (Adam) em $28\times28$ e 96,3\% com entradas redimensionadas para $224\times224$; nosso comitê
+(Acc $=\ftEnsAcc\%$) e os modelos individuais ($\ftFoldAccMS\%$) estão nessa faixa, e é razoável esperar
+ganhos adicionais com mais épocas e maior resolução de entrada em GPU.
